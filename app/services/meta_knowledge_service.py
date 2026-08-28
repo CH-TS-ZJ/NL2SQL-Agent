@@ -265,6 +265,14 @@ class MetaKnowledgeService:
         schema = OmegaConf.structured(MetaConfig)
         meta_config: MetaConfig = OmegaConf.to_object(OmegaConf.merge(schema, context))
 
+        # 全量重建前先清空旧元数据，保证脚本可重复执行、不累积脏数据
+        async with self.meta_mysql_repository.session.begin():
+            await self.meta_mysql_repository.clear_all()
+        await self.column_qdrant_repository.drop_collection()
+        await self.metric_qdrant_repository.drop_collection()
+        await self.value_es_repository.drop_index()
+        logger.info("清空 Meta MySQL / Qdrant / ES 旧元数据")
+
         # 根据配置文件判断后续要进入哪条构建链路
         if meta_config.tables:
             # 将表信息和字段信息保存到 Meta MySQL

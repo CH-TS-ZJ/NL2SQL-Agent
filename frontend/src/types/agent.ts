@@ -18,6 +18,9 @@ export type ResultEvent = {
 export type ErrorEvent = {
   type: "error";
   message: string;
+  sql?: string;
+  detail?: string;
+  retryCount?: number;
 };
 
 export type AgentEvent = ProgressEvent | ResultEvent | ErrorEvent;
@@ -37,4 +40,6 @@ export type ChatMessage = {
   steps?: StepState[];
   result?: unknown;
   error?: string;
+  errorSql?: string;
+  errorDetail?: string;
 };

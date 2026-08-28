@@ -28,6 +28,7 @@ const nodes: FlowNode[] = [
   { step: "校验SQL", x: 410, y: 630 },
   { step: "校正SQL", x: 670, y: 630 },
   { step: "执行SQL", x: 410, y: 724 },
+  { step: "SQL修正失败", x: 670, y: 724 },
 ];
 
 const connectors = [
@@ -45,12 +46,13 @@ const connectors = [
   "M410 566 L410 624",
   "M410 670 L410 718",
   "M488 650 L586 650",
-  "M670 670 L670 696 L410 696 L410 718",
+  "M670 670 L670 718",
 ];
 
 const branchLabels = [
   { text: "有误", x: 530, y: 642 },
   { text: "无误", x: 366, y: 704 },
+  { text: "修正失败", x: 690, y: 700 },
 ];
 
 function getStatusMap(steps: StepState[]) {

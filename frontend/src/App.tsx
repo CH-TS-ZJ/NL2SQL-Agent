@@ -116,6 +116,8 @@ export default function App() {
             status: "error",
             content: "这次查询没有成功。",
             error: event.message,
+            errorSql: event.sql,
+            errorDetail: event.detail,
           };
         }),
       );

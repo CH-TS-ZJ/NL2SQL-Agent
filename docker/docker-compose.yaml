@@ -4,16 +4,16 @@ services:
     container_name: mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: dili123
-      MYSQL_USER: didilili
-      MYSQL_PASSWORD: dili123
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_USER: lossts
+      MYSQL_PASSWORD: lossts123
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
-    command: --character-set-server=utf8mb4
-      --collation-server=utf8mb4_general_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
 
   elasticsearch:
     build: ./elasticsearch
