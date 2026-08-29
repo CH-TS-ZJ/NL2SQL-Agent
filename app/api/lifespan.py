@@ -17,6 +17,9 @@ from app.clients.mysql_client_manager import (
     meta_mysql_client_manager,
 )
 from app.clients.qdrant_client_manager import qdrant_client_manager
+from app.repositories.mysql.session.chat_session_repository import (
+    ChatSessionRepository,
+)
 
 
 @asynccontextmanager
@@ -29,6 +32,12 @@ async def lifespan(app: FastAPI):
     es_client_manager.init()
     meta_mysql_client_manager.init()
     dw_mysql_client_manager.init()
+
+    # 幂等创建会话表，保证既有 mysql 数据卷不需要重建也能获得会话持久化能力
+    async with meta_mysql_client_manager.session_factory() as session:
+        session_repository = ChatSessionRepository(session)
+        await session_repository.ensure_tables()
+        await session_repository.commit()
 
     # yield 之前是启动逻辑，yield 之后是关闭逻辑；中间阶段由 FastAPI 正常处理请求
     yield

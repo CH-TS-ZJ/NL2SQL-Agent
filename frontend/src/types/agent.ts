@@ -23,7 +23,12 @@ export type ErrorEvent = {
   retryCount?: number;
 };
 
-export type AgentEvent = ProgressEvent | ResultEvent | ErrorEvent;
+export type SessionEvent = {
+  type: "session";
+  sessionId: string;
+};
+
+export type AgentEvent = ProgressEvent | ResultEvent | ErrorEvent | SessionEvent;
 
 export type StepState = {
   step: string;
@@ -42,4 +47,10 @@ export type ChatMessage = {
   error?: string;
   errorSql?: string;
   errorDetail?: string;
+};
+
+export type SessionHistory = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
 };

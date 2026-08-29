@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { EmptyState } from "./components/EmptyState";
 import { MessageBubble } from "./components/MessageBubble";
-import { streamQuery } from "./lib/agentApi";
+import { getSession, streamQuery } from "./lib/agentApi";
 import { cn, summarizeResult } from "./lib/format";
 import type { AgentEvent, ChatMessage, StepState } from "./types/agent";
 
@@ -32,6 +32,16 @@ function makeId() {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+const SESSION_KEY = "shopkeeper.sessionId";
+
+function loadSessionId() {
+  return localStorage.getItem(SESSION_KEY) ?? makeId();
+}
+
+function persistSessionId(id: string) {
+  localStorage.setItem(SESSION_KEY, id);
+}
+
 function upsertStep(steps: StepState[] = [], event: Extract<AgentEvent, { type: "progress" }>) {
   const next = steps.filter((item) => item.step !== event.step);
   next.push({
@@ -46,10 +56,25 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [activeController, setActiveController] = useState<AbortController | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => loadSessionId());
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const isStreaming = Boolean(activeController);
   const canSubmit = draft.trim().length > 0 && !isStreaming;
+
+  // 首次挂载时按本地保存的会话编号恢复历史；无历史则保持空会话
+  useEffect(() => {
+    persistSessionId(sessionId);
+    getSession(sessionId)
+      .then((history) => {
+        if (history.messages.length > 0) setMessages(history.messages);
+      })
+      .catch(() => {
+        // 会话不存在（如首次使用），保持空会话即可
+      });
+    // 仅在挂载时恢复一次，后续追问由流式事件驱动
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const completedCount = useMemo(
     () => messages.filter((message) => message.role === "assistant" && message.status === "done").length,
@@ -90,6 +115,12 @@ export default function App() {
     setMessages((current) => [...current, userMessage, assistantMessage]);
 
     const onEvent = (event: AgentEvent) => {
+      if (event.type === "session") {
+        setSessionId(event.sessionId);
+        persistSessionId(event.sessionId);
+        return;
+      }
+
       setMessages((current) =>
         current.map((message) => {
           if (message.id !== assistantId) return message;
@@ -124,7 +155,7 @@ export default function App() {
     };
 
     try {
-      await streamQuery(query, { signal: controller.signal, onEvent });
+      await streamQuery(query, { sessionId, signal: controller.signal, onEvent });
       setMessages((current) =>
         current.map((message) =>
           message.id === assistantId && message.status === "streaming"
@@ -157,6 +188,9 @@ export default function App() {
 
   const clearConversation = () => {
     if (isStreaming) return;
+    const nextSessionId = makeId();
+    setSessionId(nextSessionId);
+    persistSessionId(nextSessionId);
     setMessages([]);
     setDraft("");
   };

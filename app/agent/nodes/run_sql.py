@@ -29,6 +29,8 @@ async def run_sql(state: DataAgentState, runtime: Runtime[DataAgentContext]):
         logger.info(f"SQL执行结果：{result}")
         writer({"type": "progress", "step": step, "status": "success"})
         writer({"type": "result", "data": result})
+        # 结果同时写回 state，供服务层在流式结束后持久化助手消息
+        return {"result": result}
 
     except Exception as e:
         logger.error(f"{step} failed: {e}")

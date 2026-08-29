@@ -25,13 +25,17 @@ async def fail_sql(state: DataAgentState, runtime: Runtime[DataAgentContext]):
 
     logger.error(f"SQL 修正 {retry_count} 次后仍未通过校验，最后错误：{error}")
 
+    fail_message = f"SQL 修正 {retry_count} 次后仍未通过校验，请检查问题或联系管理员。"
+
     # 结构化错误事件：前端可展示最后的 SQL 与校验错误详情，而非执行一条注定失败的 SQL
     writer(
         {
             "type": "error",
-            "message": f"SQL 修正 {retry_count} 次后仍未通过校验，请检查问题或联系管理员。",
+            "message": fail_message,
             "sql": sql,
             "detail": error,
             "retryCount": retry_count,
         }
     )
+    # 错误文案同时写回 state，供服务层在流式结束后持久化助手消息
+    return {"fail_message": fail_message}

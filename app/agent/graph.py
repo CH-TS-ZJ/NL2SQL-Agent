@@ -24,6 +24,7 @@ from app.agent.nodes.merge_retrieved_info import merge_retrieved_info
 from app.agent.nodes.recall_column import recall_column
 from app.agent.nodes.recall_metric import recall_metric
 from app.agent.nodes.recall_value import recall_value
+from app.agent.nodes.rewrite_query import rewrite_query
 from app.agent.nodes.run_sql import run_sql
 from app.agent.nodes.validate_sql import validate_sql
 from app.agent.state import DataAgentState
@@ -44,6 +45,7 @@ from app.repositories.qdrant.metric_qdrant_repository import MetricQdrantReposit
 graph_builder = StateGraph(state_schema=DataAgentState, context_schema=DataAgentContext)
 
 # 注册节点：每个节点负责问数链路中的一个清晰步骤
+graph_builder.add_node("rewrite_query", rewrite_query)
 graph_builder.add_node("extract_keywords", extract_keywords)
 graph_builder.add_node("recall_column", recall_column)
 graph_builder.add_node("recall_value", recall_value)
@@ -58,8 +60,9 @@ graph_builder.add_node("correct_sql", correct_sql)
 graph_builder.add_node("run_sql", run_sql)
 graph_builder.add_node("fail_sql", fail_sql)
 
-# 从用户问题开始，先抽取关键词作为后续检索的基础
-graph_builder.add_edge(START, "extract_keywords")
+# 从用户问题开始，先做指代消解把追问改写成完整问题，再抽取关键词
+graph_builder.add_edge(START, "rewrite_query")
+graph_builder.add_edge("rewrite_query", "extract_keywords")
 
 # 关键词抽取后并行进入三类召回，分别面向字段 字段值和业务指标
 graph_builder.add_edge("extract_keywords", "recall_column")
