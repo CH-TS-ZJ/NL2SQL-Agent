@@ -67,16 +67,25 @@ class QueryService:
         # 会话持久化仓储，负责在流式链路前后落库用户和助手消息
         self.session_repository = session_repository
 
-    async def query(self, query: str, session_id: str | None = None):
+    async def query(
+        self, query: str, session_id: str | None = None, user_id: str | None = None
+    ):
         """执行一次问数工作流，并逐段产出 SSE 消息"""
 
         # 会话由前端生成并随请求传入；缺失时后端兜底生成一个
         session_id = session_id or uuid.uuid4().hex
 
-        # 先加载历史对话，再落库本轮用户消息，保证历史不含当前轮次
-        await self.session_repository.ensure_session(
-            session_id, title=query[:50]
-        )
+        # 先校验会话归属，再加载历史对话，保证用户不能读写他人会话
+        try:
+            await self.session_repository.ensure_session(
+                session_id, title=query[:50], user_id=user_id
+            )
+        except PermissionError as e:
+            # 流式响应已开始后不能再改 HTTP 状态码，因此把越权包装成 SSE 错误消息
+            error = {"type": "error", "message": str(e)}
+            yield f"data: {json.dumps(error, ensure_ascii=False)}\n\n"
+            return
+
         prior_messages = await self.session_repository.list_messages(session_id)
         history = _build_history(prior_messages)
 

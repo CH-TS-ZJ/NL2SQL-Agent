@@ -20,6 +20,10 @@ class ChatSession(Base):
 
     # 会话编号由前端生成并随每次请求传入，后端负责按需创建
     id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="会话编号")
+    # 归属用户编号，用于后端会话隔离；旧数据允许为空（未归属，读取时按不存在处理）
+    user_id: Mapped[str | None] = mapped_column(
+        String(64), index=True, comment="所属用户编号"
+    )
     title: Mapped[str | None] = mapped_column(String(255), comment="会话标题(取首个问题)")
     created_at: Mapped[datetime] = mapped_column(DateTime, comment="创建时间")
     updated_at: Mapped[datetime] = mapped_column(DateTime, comment="最近更新时间")

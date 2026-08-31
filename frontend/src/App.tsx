@@ -8,14 +8,17 @@ import {
   Eraser,
   History,
   Leaf,
+  LogOut,
   MessageSquarePlus,
   Server,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { EmptyState } from "./components/EmptyState";
+import { Login } from "./components/Login";
 import { MessageBubble } from "./components/MessageBubble";
 import { getSession, streamQuery } from "./lib/agentApi";
+import { clearAuth, getUsername, isLoggedIn, setUsername } from "./lib/auth";
 import { cn, summarizeResult } from "./lib/format";
 import type { AgentEvent, ChatMessage, StepState } from "./types/agent";
 
@@ -53,6 +56,8 @@ function upsertStep(steps: StepState[] = [], event: Extract<AgentEvent, { type: 
 }
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState<boolean>(() => isLoggedIn());
+  const [currentUser, setCurrentUser] = useState<string | null>(() => getUsername());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [activeController, setActiveController] = useState<AbortController | null>(null);
@@ -62,8 +67,9 @@ export default function App() {
   const isStreaming = Boolean(activeController);
   const canSubmit = draft.trim().length > 0 && !isStreaming;
 
-  // 首次挂载时按本地保存的会话编号恢复历史；无历史则保持空会话
+  // 登录后按本地保存的会话编号恢复历史；无历史则保持空会话
   useEffect(() => {
+    if (!loggedIn) return;
     persistSessionId(sessionId);
     getSession(sessionId)
       .then((history) => {
@@ -72,9 +78,9 @@ export default function App() {
       .catch(() => {
         // 会话不存在（如首次使用），保持空会话即可
       });
-    // 仅在挂载时恢复一次，后续追问由流式事件驱动
+    // 仅在登录态变化时恢复一次，后续追问由流式事件驱动
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loggedIn]);
 
   const completedCount = useMemo(
     () => messages.filter((message) => message.role === "assistant" && message.status === "done").length,
@@ -195,6 +201,34 @@ export default function App() {
     setDraft("");
   };
 
+  const handleLogin = (name: string) => {
+    setUsername(name);
+    setCurrentUser(name);
+    // 登录后换一个新会话，避免沿用上一用户遗留的会话编号造成跨用户串数据
+    const nextSessionId = makeId();
+    setSessionId(nextSessionId);
+    persistSessionId(nextSessionId);
+    setMessages([]);
+    setDraft("");
+    setLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    if (isStreaming) return;
+    clearAuth();
+    setCurrentUser(null);
+    const nextSessionId = makeId();
+    setSessionId(nextSessionId);
+    persistSessionId(nextSessionId);
+    setMessages([]);
+    setDraft("");
+    setLoggedIn(false);
+  };
+
+  if (!loggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className="h-dvh overflow-hidden bg-parchment text-ink">
       <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(90deg,rgba(32,32,29,0.045)_1px,transparent_1px),linear-gradient(rgba(32,32,29,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
@@ -277,18 +311,33 @@ export default function App() {
                 <div className="truncate text-xs text-ink/45">FastAPI SSE / LangGraph</div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={clearConversation}
-              disabled={messages.length === 0 || isStreaming}
-              className={cn(
-                "grid h-9 w-9 place-items-center rounded-full text-ink/55 transition hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-35",
-              )}
-              title="清空"
-              aria-label="清空"
-            >
-              <Eraser className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-2">
+              {currentUser ? (
+                <span className="text-sm text-ink/60">{currentUser}</span>
+              ) : null}
+              <button
+                type="button"
+                onClick={clearConversation}
+                disabled={messages.length === 0 || isStreaming}
+                className={cn(
+                  "grid h-9 w-9 place-items-center rounded-full text-ink/55 transition hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-35",
+                )}
+                title="清空"
+                aria-label="清空"
+              >
+                <Eraser className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isStreaming}
+                className="grid h-9 w-9 place-items-center rounded-full text-ink/55 transition hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
+                title="退出登录"
+                aria-label="退出登录"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           </header>
 
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

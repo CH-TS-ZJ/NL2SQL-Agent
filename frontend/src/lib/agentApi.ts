@@ -3,6 +3,7 @@
  * 封装后端 /api/query SSE 流式接口请求与事件解析逻辑
  */
 import type { AgentEvent, ChatMessage, SessionHistory } from "../types/agent";
+import { getToken } from "./auth";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -12,12 +13,62 @@ type QueryOptions = {
   onEvent: (event: AgentEvent) => void;
 };
 
+export type AuthResult = {
+  access_token: string;
+  token_type: string;
+  user_id: string;
+  username: string;
+};
+
+/** 有 token 时带上 Bearer 头，未登录时为空对象 */
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function parseError(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as { detail?: string };
+    return data.detail ?? "";
+  } catch {
+    return "";
+  }
+}
+
+async function postAuth(
+  path: string,
+  username: string,
+  password: string,
+): Promise<AuthResult> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    const detail = await parseError(response);
+    throw new Error(detail || `请求失败：HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as AuthResult;
+}
+
+export function login(username: string, password: string) {
+  return postAuth("/api/auth/login", username, password);
+}
+
+export function register(username: string, password: string) {
+  return postAuth("/api/auth/register", username, password);
+}
+
 export async function streamQuery(query: string, options: QueryOptions) {
   const response = await fetch(`${API_BASE_URL}/api/query`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      ...authHeaders(),
     },
     body: JSON.stringify({ query, session_id: options.sessionId }),
     signal: options.signal,
@@ -109,7 +160,9 @@ function toChatMessage(message: StoredMessage): ChatMessage {
 
 /** 拉取单个会话的历史消息，用于页面刷新后恢复对话 */
 export async function getSession(sessionId: string): Promise<SessionHistory> {
-  const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`);
+  const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`, {
+    headers: { ...authHeaders() },
+  });
 
   if (!response.ok) {
     throw new Error(`加载会话失败：HTTP ${response.status}`);

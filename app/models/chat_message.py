@@ -27,7 +27,8 @@ class ChatMessage(Base):
     role: Mapped[str] = mapped_column(String(16), comment="角色(user/assistant)")
     content: Mapped[str | None] = mapped_column(Text, comment="消息文本")
     query: Mapped[str | None] = mapped_column(Text, comment="指代消解后的完整问题")
-    sql: Mapped[str | None] = mapped_column(Text, comment="生成的SQL")
+    # sql 是 MySQL 8.0.46 的保留字，需要 quote 让 SQLAlchemy 生成反引号包裹的列名
+    sql: Mapped[str | None] = mapped_column("sql", Text, quote=True, comment="生成的SQL")
     result: Mapped[dict | list | None] = mapped_column(JSON, comment="查询结果")
     error: Mapped[str | None] = mapped_column(Text, comment="错误信息")
     detail: Mapped[str | None] = mapped_column(Text, comment="错误详情(校验错误)")

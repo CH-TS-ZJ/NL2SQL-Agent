@@ -11,7 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from starlette.responses import StreamingResponse
 
-from app.api.dependencies import get_query_service
+from app.api.dependencies import get_current_user, get_query_service
 from app.api.schemas.query_schema import QuerySchema
 from app.services.query_service import QueryService
 
@@ -25,12 +25,14 @@ async def query_handler(
     query: QuerySchema,
     # 服务依赖：FastAPI 会调用 get_query_service，递归组装它所需的仓储和客户端
     query_service: Annotated[QueryService, Depends(get_query_service)],
+    # 鉴权依赖：解析 Bearer JWT 得到当前用户编号，用于会话归属
+    user_id: Annotated[str, Depends(get_current_user)],
 ):
     """接收用户自然语言问题，并流式返回 LangGraph 工作流输出"""
 
     return StreamingResponse(
         # query.query 是用户问题字符串，query.session_id 标识所属会话；
         # QueryService.query 返回异步生成器供响应逐段消费
-        query_service.query(query.query, query.session_id),
+        query_service.query(query.query, query.session_id, user_id),
         media_type="text/event-stream",
     )

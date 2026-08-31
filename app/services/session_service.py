@@ -33,11 +33,11 @@ class SessionService:
     def __init__(self, session_repository: ChatSessionRepository):
         self.session_repository = session_repository
 
-    async def get_session(self, session_id: str) -> dict | None:
-        """返回单个会话及其消息列表；会话不存在时返回 None"""
+    async def get_session(self, session_id: str, user_id: str) -> dict | None:
+        """返回单个会话及其消息列表；会话不存在或不属于当前用户时返回 None"""
 
         session = await self.session_repository.get_session(session_id)
-        if session is None:
+        if session is None or session.user_id != user_id:
             return None
 
         messages = await self.session_repository.list_messages(session_id)

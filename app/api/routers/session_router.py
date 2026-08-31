@@ -9,7 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies import get_session_service
+from app.api.dependencies import get_current_user, get_session_service
 from app.services.session_service import SessionService
 
 # 会话接口和问数接口分开维护，避免查询历史逻辑挤进 query_router
@@ -20,10 +20,12 @@ session_router = APIRouter()
 async def get_session_handler(
     session_id: str,
     session_service: Annotated[SessionService, Depends(get_session_service)],
+    # 鉴权依赖：只允许读取属于自己的会话，越权按不存在处理返回 404
+    user_id: Annotated[str, Depends(get_current_user)],
 ):
     """返回指定会话的历史消息，供前端恢复对话"""
 
-    session = await session_service.get_session(session_id)
+    session = await session_service.get_session(session_id, user_id)
     if session is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     return session

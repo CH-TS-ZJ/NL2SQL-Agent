@@ -51,9 +51,11 @@ CREATE TABLE column_metric
 CREATE TABLE IF NOT EXISTS chat_session
 (
     id          VARCHAR(64) PRIMARY KEY COMMENT '会话编号',
+    user_id     VARCHAR(64) COMMENT '所属用户编号',
     title       VARCHAR(255) COMMENT '会话标题(取首个问题)',
     created_at  DATETIME COMMENT '创建时间',
-    updated_at  DATETIME COMMENT '最近更新时间'
+    updated_at  DATETIME COMMENT '最近更新时间',
+    KEY idx_user_id (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS chat_message
@@ -63,10 +65,20 @@ CREATE TABLE IF NOT EXISTS chat_message
     role        VARCHAR(16) NOT NULL COMMENT '角色 user/assistant',
     content     TEXT COMMENT '消息文本',
     query       TEXT COMMENT '指代消解后的完整问题',
-    sql         TEXT COMMENT '生成的SQL',
+    `sql`       TEXT COMMENT '生成的SQL',
     result      JSON COMMENT '查询结果',
     error       TEXT COMMENT '错误信息',
     detail      TEXT COMMENT '错误详情(校验错误)',
     created_at  DATETIME COMMENT '创建时间',
     KEY idx_session_id (session_id)
+);
+
+CREATE TABLE IF NOT EXISTS user
+(
+    id            VARCHAR(64) PRIMARY KEY COMMENT '用户编号',
+    username      VARCHAR(64) NOT NULL COMMENT '用户名',
+    password_hash VARCHAR(255) NOT NULL COMMENT '密码哈希',
+    created_at    DATETIME COMMENT '创建时间',
+    UNIQUE KEY uk_username (username),
+    KEY idx_username (username)
 );
