@@ -56,6 +56,14 @@ class MetaMySQLRepository:
             ]
         )
 
+    async def clear_all(self):
+        """清空元数据库中的表/字段/指标及关联关系，供全量重建前调用"""
+        # 先删关联关系表，再删实体，避免残留指向已删除实体的记录
+        await self.session.execute(text("delete from column_metric"))
+        await self.session.execute(text("delete from column_info"))
+        await self.session.execute(text("delete from metric_info"))
+        await self.session.execute(text("delete from table_info"))
+
     async def get_column_info_by_id(self, id: str) -> ColumnInfo | None:
         """按字段 id 查询字段元数据，供召回信息合并阶段补齐字段上下文"""
 

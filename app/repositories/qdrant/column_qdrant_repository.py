@@ -33,6 +33,11 @@ class ColumnQdrantRepository:
                 ),
             )
 
+    async def drop_collection(self):
+        """删除字段向量集合，供全量重建前调用，避免旧向量点累积"""
+        if await self.client.collection_exists(self.collection_name):
+            await self.client.delete_collection(self.collection_name)
+
     async def upsert(
         self,
         ids: list[str],

@@ -60,10 +60,21 @@ class DBInfoState(TypedDict):
     version: str
 
 
+class ChatTurn(TypedDict):
+    """一轮历史对话，供指代消解节点还原上下文"""
+
+    role: str  # user 或 assistant
+    content: str  # user 为原始问题，assistant 为结果摘要
+    query: str | None  # 指代消解后的完整问题，assistant 轮用于还原上一轮真实意图
+    sql: str | None  # assistant 生成的 SQL，帮助补齐上一轮表/字段
+
+
 class DataAgentState(TypedDict):
     """一次问数链路中的核心状态"""
 
-    query: str  # 用户输入的查询
+    query: str  # 用户输入的查询（指代消解后为自包含的完整问题）
+    original_query: str  # 本轮用户原始输入，用于持久化和展示
+    history: list[ChatTurn]  # 历史对话，供指代消解节点还原上下文
     keywords: list[str]  # 抽取的关键词
     retrieved_column_infos: list[ColumnInfo]  # 检索到的字段信息
     retrieved_metric_infos: list[MetricInfo]  # 检索到的指标信息
@@ -76,4 +87,7 @@ class DataAgentState(TypedDict):
 
     sql: str  # 生成或校正后的SQL
 
+    result: list[dict] | None  # run_sql 写入的最终查询结果，供持久化落库
     error: str  # 校验SQL时出现的错误信息
+    retry_count: int  # SQL校验失败后进入 correct_sql 修正的累计次数
+    fail_message: str | None  # fail_sql 写入的结构化错误文案，供持久化落库

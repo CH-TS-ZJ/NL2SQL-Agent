@@ -50,7 +50,17 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
           {message.error && (
             <div className="mt-3 border border-tomato/30 bg-tomato/10 px-3 py-2 text-sm text-tomato">
-              {message.error}
+              <div>{message.error}</div>
+              {message.errorDetail && (
+                <div className="mt-2 border-t border-tomato/20 pt-2 text-xs text-tomato/80">
+                  校验错误：{message.errorDetail}
+                </div>
+              )}
+              {message.errorSql && (
+                <pre className="mt-2 overflow-x-auto border-t border-tomato/20 pt-2 text-xs text-tomato/80">
+                  {message.errorSql}
+                </pre>
+              )}
             </div>
           )}
 

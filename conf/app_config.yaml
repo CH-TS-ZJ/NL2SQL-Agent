@@ -12,15 +12,15 @@ logging:
 db_meta:
   host: localhost
   port: 3306
-  user: didilili
-  password: dili123
+  user: lossts
+  password: lossts123
   database: meta
 
 db_dw:
   host: localhost
   port: 3306
-  user: didilili
-  password: dili123
+  user: lossts
+  password: lossts123
   database: dw
 
 qdrant:
@@ -42,3 +42,8 @@ llm:
   model_name: Pro/zai-org/GLM-5.1
   api_key: ${oc.env:LLM_API_KEY}
   base_url: https://api.siliconflow.cn/v1
+
+auth:
+  secret_key: ${oc.env:JWT_SECRET}
+  algorithm: HS256
+  expire_minutes: 10080

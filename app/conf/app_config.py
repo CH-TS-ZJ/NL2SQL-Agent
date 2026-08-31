@@ -88,6 +88,15 @@ class LLMConfig:
 
 
 @dataclass
+class AuthConfig:
+    """用户体系与 JWT 配置"""
+
+    secret_key: str
+    algorithm: str = "HS256"
+    expire_minutes: int = 10080
+
+
+@dataclass
 class AppConfig:
     """项目级总配置入口"""
 
@@ -98,6 +107,7 @@ class AppConfig:
     embedding: EmbeddingConfig
     es: ESConfig
     llm: LLMConfig
+    auth: AuthConfig
 
 
 # 从当前文件位置回到项目根目录，再定位到 conf/app_config.yaml
