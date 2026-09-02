@@ -1,0 +1,1534 @@
+# Text-to-SQL 评测集
+# 数据只覆盖 2025-01-01 ~ 2025-03-31（Q1），时间问句统一锚定 2025Q1。
+# gold_sql 必须能在 dw 库正确执行，run_eval.py 启动时会全量校验。
+# category: 用于报告分组；difficulty: easy / medium / hard。
+
+- id: R001
+  category: 地区维度
+  difficulty: easy
+  query: 统计各大区的销售总额
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售总额 DESC
+
+- id: R002
+  category: 地区维度
+  difficulty: easy
+  query: 按大区统计订单数量
+  gold_sql: SELECT r.region_name AS 大区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 订单数 DESC
+
+- id: R003
+  category: 地区维度
+  difficulty: easy
+  query: 统计每个省份的销售额
+  gold_sql: SELECT r.province AS 省份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.province ORDER BY 销售额 DESC
+
+- id: R004
+  category: 地区维度
+  difficulty: easy
+  query: 华东地区的销售总额是多少
+  gold_sql: SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华东'
+
+- id: R005
+  category: 地区维度
+  difficulty: easy
+  query: 华北地区的订单数有多少
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华北'
+
+- id: R006
+  category: 地区维度
+  difficulty: medium
+  query: 华南和华东两个大区各自的销售额
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name IN ('华南', '华东') GROUP BY r.region_name ORDER BY 销售额 DESC
+
+- id: R007
+  category: 地区维度
+  difficulty: medium
+  query: 北京和上海两个城市的销售额对比
+  gold_sql: SELECT r.province AS 城市, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.province IN ('北京市', '上海市') GROUP BY r.province ORDER BY 销售额 DESC
+
+- id: R008
+  category: 地区维度
+  difficulty: medium
+  query: 哪个大区的销售额最高
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 DESC LIMIT 1
+
+- id: R009
+  category: 地区维度
+  difficulty: medium
+  query: 哪个大区的订单数最少
+  gold_sql: SELECT r.region_name AS 大区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 订单数 ASC LIMIT 1
+
+- id: R010
+  category: 地区维度
+  difficulty: medium
+  query: 统计华中地区 2025 年第一季度的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id WHERE r.region_name = '华中' AND d.year = 2025 AND d.quarter = 'Q1'
+
+- id: R011
+  category: 地区维度
+  difficulty: easy
+  query: 每个大区的平均订单金额是多少
+  gold_sql: SELECT r.region_name AS 大区, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 平均订单金额 DESC
+
+- id: R012
+  category: 地区维度
+  difficulty: medium
+  query: 西南地区销售额占全国的比例
+  gold_sql: SELECT (SELECT SUM(f.order_amount) FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '西南') / (SELECT SUM(order_amount) FROM fact_order) AS 占比
+
+- id: R013
+  category: 地区维度
+  difficulty: easy
+  query: 统计华南地区的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华南'
+
+- id: R014
+  category: 地区维度
+  difficulty: hard
+  query: 销售额排名第二的大区是哪个
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 DESC LIMIT 1 OFFSET 1
+
+- id: R015
+  category: 地区维度
+  difficulty: easy
+  query: 按大区统计 1 月份的销售额
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1 GROUP BY r.region_name ORDER BY 销售额 DESC
+
+- id: R016
+  category: 地区维度
+  difficulty: medium
+  query: 华东地区有哪些省份产生了订单
+  gold_sql: SELECT DISTINCT r.province AS 省份 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华东'
+
+- id: R017
+  category: 地区维度
+  difficulty: easy
+  query: 各大区的销量总和
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销量 DESC
+
+- id: R018
+  category: 地区维度
+  difficulty: medium
+  query: 统计华北和华中地区的总销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name IN ('华北', '华中')
+
+- id: R019
+  category: 地区维度
+  difficulty: medium
+  query: 广东省的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.province = '广东省'
+
+- id: R020
+  category: 地区维度
+  difficulty: hard
+  query: 销售额最高的前三个大区
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 DESC LIMIT 3
+
+- id: T001
+  category: 时间维度
+  difficulty: easy
+  query: 按月份统计 2025 年的销售额
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 GROUP BY d.month ORDER BY d.month
+
+- id: T002
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年第一季度的销售总额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.quarter = 'Q1'
+
+- id: T003
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年 1 月的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.month = 1
+
+- id: T004
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年 2 月的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.month = 2
+
+- id: T005
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年 3 月的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.month = 3
+
+- id: T006
+  category: 时间维度
+  difficulty: medium
+  query: 三个月里哪个月的销售额最高
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY 销售额 DESC LIMIT 1
+
+- id: T007
+  category: 时间维度
+  difficulty: medium
+  query: 按季度统计销售额
+  gold_sql: SELECT d.quarter AS 季度, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.quarter ORDER BY d.quarter
+
+- id: T008
+  category: 时间维度
+  difficulty: medium
+  query: 1 月份的销量是多少
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1
+
+- id: T009
+  category: 时间维度
+  difficulty: easy
+  query: 统计 2025 年 3 月的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3 AND d.year = 2025
+
+- id: T010
+  category: 时间维度
+  difficulty: medium
+  query: 按日统计 2025 年 1 月 1 日到 1 月 5 日的销售额
+  gold_sql: SELECT d.day AS 日, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1 AND d.day BETWEEN 1 AND 5 GROUP BY d.day ORDER BY d.day
+
+- id: T011
+  category: 时间维度
+  difficulty: hard
+  query: 2 月份的销售额比 1 月份高多少
+  gold_sql: SELECT (SELECT SUM(f.order_amount) FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 2) - (SELECT SUM(f.order_amount) FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1) AS 差额
+
+- id: T012
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年第一季度总共产生了多少笔订单
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1' AND d.year = 2025
+
+- id: T013
+  category: 时间维度
+  difficulty: medium
+  query: 3 月各周的销售额（按日期分组）
+  gold_sql: SELECT d.day AS 日, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3 GROUP BY d.day ORDER BY d.day
+
+- id: T014
+  category: 时间维度
+  difficulty: medium
+  query: 2025 年第一季度的平均每日销售额
+  gold_sql: SELECT SUM(f.order_amount) / COUNT(DISTINCT f.date_id) AS 平均每日销售额 FROM fact_order f
+
+- id: T015
+  category: 时间维度
+  difficulty: medium
+  query: 1 月份的平均订单金额
+  gold_sql: SELECT AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1
+
+- id: T016
+  category: 时间维度
+  difficulty: medium
+  query: 哪个日期产生的订单最多
+  gold_sql: SELECT d.day AS 日, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.day ORDER BY 订单数 DESC LIMIT 1
+
+- id: T017
+  category: 时间维度
+  difficulty: easy
+  query: 统计 2025 年第一季度的销量总和
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1'
+
+- id: T018
+  category: 时间维度
+  difficulty: medium
+  query: 按月份统计订单数
+  gold_sql: SELECT d.month AS 月份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: T019
+  category: 时间维度
+  difficulty: hard
+  query: 2 月每天的销售额，只列出销售额超过 1000 的日期
+  gold_sql: SELECT d.day AS 日, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 2 GROUP BY d.day HAVING SUM(f.order_amount) > 1000 ORDER BY d.day
+
+- id: T020
+  category: 时间维度
+  difficulty: medium
+  query: 2025 年第一季度的 GMV
+  gold_sql: SELECT SUM(f.order_amount) AS GMV FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.quarter = 'Q1'
+
+- id: T021
+  category: 时间维度
+  difficulty: medium
+  query: 1 月、2 月、3 月各自的销售额
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: T022
+  category: 时间维度
+  difficulty: easy
+  query: 3 月的销售总额是多少
+  gold_sql: SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3
+
+- id: T023
+  category: 时间维度
+  difficulty: medium
+  query: 按月份统计每个月的平均订单金额
+  gold_sql: SELECT d.month AS 月份, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: T024
+  category: 时间维度
+  difficulty: hard
+  query: 第一季度销售额最高的那一天
+  gold_sql: SELECT d.month AS 月, d.day AS 日, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month, d.day ORDER BY 销售额 DESC LIMIT 1
+
+- id: T025
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年 2 月的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 2 AND d.year = 2025
+
+- id: T026
+  category: 时间维度
+  difficulty: medium
+  query: 1 月份的订单数比 3 月份少多少
+  gold_sql: SELECT (SELECT COUNT(*) FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3) - (SELECT COUNT(*) FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1) AS 差额
+
+- id: T027
+  category: 时间维度
+  difficulty: hard
+  query: 第一季度每天都有订单吗，统计有订单的天数
+  gold_sql: SELECT COUNT(DISTINCT f.date_id) AS 有订单天数 FROM fact_order f
+
+- id: T028
+  category: 时间维度
+  difficulty: medium
+  query: 按月份统计 GMV，并按 GMV 降序排列
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_amount) AS GMV FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY GMV DESC
+
+- id: T029
+  category: 时间维度
+  difficulty: medium
+  query: 3 月 5 日的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3 AND d.day = 5
+
+- id: T030
+  category: 时间维度
+  difficulty: easy
+  query: 2025 年第一季度的订单总数
+  gold_sql: SELECT COUNT(*) AS 订单总数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1'
+
+- id: P001
+  category: 商品维度
+  difficulty: easy
+  query: 按品类统计销售额
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销售额 DESC
+
+- id: P002
+  category: 商品维度
+  difficulty: easy
+  query: 按品牌统计销售额
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 销售额 DESC
+
+- id: P003
+  category: 商品维度
+  difficulty: easy
+  query: 手机数码品类的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '手机数码'
+
+- id: P004
+  category: 商品维度
+  difficulty: easy
+  query: 苹果品牌的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '苹果'
+
+- id: P005
+  category: 商品维度
+  difficulty: medium
+  query: 哪个品类的销售额最高
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销售额 DESC LIMIT 1
+
+- id: P006
+  category: 商品维度
+  difficulty: medium
+  query: 销量最高的品牌是哪个
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 销量 DESC LIMIT 1
+
+- id: P007
+  category: 商品维度
+  difficulty: easy
+  query: 每个品牌的订单数
+  gold_sql: SELECT p.brand AS 品牌, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 订单数 DESC
+
+- id: P008
+  category: 商品维度
+  difficulty: easy
+  query: 家用电器品类的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '家用电器'
+
+- id: P009
+  category: 商品维度
+  difficulty: medium
+  query: 华为品牌的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '华为'
+
+- id: P010
+  category: 商品维度
+  difficulty: easy
+  query: 休闲零食类商品的销售总额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '休闲零食'
+
+- id: P011
+  category: 商品维度
+  difficulty: medium
+  query: 销售额最高的前五个商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销售额 DESC LIMIT 5
+
+- id: P012
+  category: 商品维度
+  difficulty: medium
+  query: 销量最高的商品是哪个
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销量 DESC LIMIT 1
+
+- id: P013
+  category: 商品维度
+  difficulty: easy
+  query: 按品类统计销量
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销量 DESC
+
+- id: P014
+  category: 商品维度
+  difficulty: medium
+  query: 耐克品牌的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '耐克'
+
+- id: P015
+  category: 商品维度
+  difficulty: hard
+  query: 手机数码和家用电器两个品类的销售额对比
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category IN ('手机数码', '家用电器') GROUP BY p.category ORDER BY 销售额 DESC
+
+- id: P016
+  category: 商品维度
+  difficulty: easy
+  query: 苹果和三星两个品牌的销售额
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand IN ('苹果', '三星') GROUP BY p.brand ORDER BY 销售额 DESC
+
+- id: P017
+  category: 商品维度
+  difficulty: medium
+  query: 服饰品类的订单数量
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '服饰'
+
+- id: P018
+  category: 商品维度
+  difficulty: hard
+  query: 每个品类的平均订单金额
+  gold_sql: SELECT p.category AS 品类, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 平均订单金额 DESC
+
+- id: P019
+  category: 商品维度
+  difficulty: easy
+  query: 食品饮料品类的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '食品饮料'
+
+- id: P020
+  category: 商品维度
+  difficulty: medium
+  query: 统计每个商品的订单数，按订单数降序排列
+  gold_sql: SELECT p.product_name AS 商品, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 订单数 DESC
+
+- id: P021
+  category: 商品维度
+  difficulty: medium
+  query: 华为手机的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '华为'
+
+- id: P022
+  category: 商品维度
+  difficulty: hard
+  query: 销售额超过 10000 的品类有哪些
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING SUM(f.order_amount) > 10000 ORDER BY 销售额 DESC
+
+- id: P023
+  category: 商品维度
+  difficulty: easy
+  query: 鞋靴品类的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '鞋靴'
+
+- id: P024
+  category: 商品维度
+  difficulty: medium
+  query: 亚马逊 Kindle 的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '亚马逊'
+
+- id: P025
+  category: 商品维度
+  difficulty: medium
+  query: 排名前五的品牌（按销售额）
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 销售额 DESC LIMIT 5
+
+- id: P026
+  category: 商品维度
+  difficulty: hard
+  query: 休闲零食品类占全部销售额的比例
+  gold_sql: SELECT (SELECT SUM(f.order_amount) FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '休闲零食') / (SELECT SUM(order_amount) FROM fact_order) AS 占比
+
+- id: P027
+  category: 商品维度
+  difficulty: medium
+  query: 有多少个不同品牌产生过订单
+  gold_sql: SELECT COUNT(DISTINCT p.brand) AS 品牌数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id
+
+- id: P028
+  category: 商品维度
+  difficulty: medium
+  query: 有多少个不同商品被购买过
+  gold_sql: SELECT COUNT(DISTINCT f.product_id) AS 商品数 FROM fact_order f
+
+- id: P029
+  category: 商品维度
+  difficulty: medium
+  query: 各品类的订单数量
+  gold_sql: SELECT p.category AS 品类, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 订单数 DESC
+
+- id: P030
+  category: 商品维度
+  difficulty: easy
+  query: 美的品牌的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '美的'
+
+- id: C001
+  category: 客户维度
+  difficulty: easy
+  query: 按会员等级统计销售额
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 销售额 DESC
+
+- id: C002
+  category: 客户维度
+  difficulty: easy
+  query: 按性别统计订单数
+  gold_sql: SELECT c.gender AS 性别, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.gender ORDER BY 订单数 DESC
+
+- id: C003
+  category: 客户维度
+  difficulty: medium
+  query: 黄金会员的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '黄金'
+
+- id: C004
+  category: 客户维度
+  difficulty: medium
+  query: 哪个会员等级贡献的销售额最高
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 销售额 DESC LIMIT 1
+
+- id: C005
+  category: 客户维度
+  difficulty: easy
+  query: 男性客户的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.gender = '男'
+
+- id: C006
+  category: 客户维度
+  difficulty: easy
+  query: 女性客户的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.gender = '女'
+
+- id: C007
+  category: 客户维度
+  difficulty: medium
+  query: 铂金会员的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '铂金'
+
+- id: C008
+  category: 客户维度
+  difficulty: medium
+  query: 白银会员的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '白银'
+
+- id: C009
+  category: 客户维度
+  difficulty: hard
+  query: 各会员等级的平均订单金额
+  gold_sql: SELECT c.member_level AS 会员等级, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 平均订单金额 DESC
+
+- id: C010
+  category: 客户维度
+  difficulty: medium
+  query: 有多少个不同客户下过订单
+  gold_sql: SELECT COUNT(DISTINCT f.customer_id) AS 客户数 FROM fact_order f
+
+- id: C011
+  category: 客户维度
+  difficulty: medium
+  query: 李伟的消费总额
+  gold_sql: SELECT SUM(f.order_amount) AS 消费总额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.customer_name = '李伟'
+
+- id: C012
+  category: 客户维度
+  difficulty: medium
+  query: 王芳下过多少单
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.customer_name = '王芳'
+
+- id: C013
+  category: 客户维度
+  difficulty: hard
+  query: 消费最高的客户是谁
+  gold_sql: SELECT c.customer_name AS 客户, SUM(f.order_amount) AS 消费额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY 消费额 DESC LIMIT 1
+
+- id: C014
+  category: 客户维度
+  difficulty: hard
+  query: 下单次数最多的前五名客户
+  gold_sql: SELECT c.customer_name AS 客户, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY 订单数 DESC LIMIT 5
+
+- id: C015
+  category: 客户维度
+  difficulty: easy
+  query: 各会员等级的人数
+  gold_sql: SELECT c.member_level AS 会员等级, COUNT(DISTINCT c.customer_id) AS 人数 FROM dim_customer c GROUP BY c.member_level
+
+- id: C016
+  category: 客户维度
+  difficulty: medium
+  query: 男女客户各自的销售额
+  gold_sql: SELECT c.gender AS 性别, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.gender ORDER BY 销售额 DESC
+
+- id: C017
+  category: 客户维度
+  difficulty: medium
+  query: 青铜会员的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '青铜'
+
+- id: C018
+  category: 客户维度
+  difficulty: medium
+  query: 每个客户下过几单，只统计下单 3 次及以上的客户
+  gold_sql: SELECT c.customer_name AS 客户, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name HAVING COUNT(*) >= 3 ORDER BY 订单数 DESC
+
+- id: C019
+  category: 客户维度
+  difficulty: hard
+  query: 平均每个客户贡献多少销售额
+  gold_sql: SELECT SUM(f.order_amount) / COUNT(DISTINCT f.customer_id) AS 平均客户贡献 FROM fact_order f
+
+- id: C020
+  category: 客户维度
+  difficulty: medium
+  query: 男性客户的平均订单金额
+  gold_sql: SELECT AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.gender = '男'
+
+- id: C021
+  category: 客户维度
+  difficulty: medium
+  query: 赵磊的消费总额
+  gold_sql: SELECT SUM(f.order_amount) AS 消费总额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.customer_name = '赵磊'
+
+- id: C022
+  category: 客户维度
+  difficulty: hard
+  query: 铂金会员和黄金会员的销售额对比
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level IN ('铂金', '黄金') GROUP BY c.member_level ORDER BY 销售额 DESC
+
+- id: C023
+  category: 客户维度
+  difficulty: medium
+  query: 女性客户的销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.gender = '女'
+
+- id: C024
+  category: 客户维度
+  difficulty: medium
+  query: 各性别客户的人数
+  gold_sql: SELECT c.gender AS 性别, COUNT(DISTINCT c.customer_id) AS 人数 FROM dim_customer c GROUP BY c.gender
+
+- id: C025
+  category: 客户维度
+  difficulty: easy
+  query: 所有会员等级有哪些（去重）
+  gold_sql: SELECT DISTINCT c.member_level AS 会员等级 FROM dim_customer c
+
+- id: A001
+  category: 单指标聚合
+  difficulty: easy
+  query: 总销售额是多少
+  gold_sql: SELECT SUM(f.order_amount) AS 总销售额 FROM fact_order f
+
+- id: A002
+  category: 单指标聚合
+  difficulty: easy
+  query: 总共产生了多少订单
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f
+
+- id: A003
+  category: 单指标聚合
+  difficulty: easy
+  query: 总销量是多少
+  gold_sql: SELECT SUM(f.order_quantity) AS 总销量 FROM fact_order f
+
+- id: A004
+  category: 单指标聚合
+  difficulty: easy
+  query: 所有订单的平均订单金额
+  gold_sql: SELECT AVG(f.order_amount) AS 平均订单金额 FROM fact_order f
+
+- id: A005
+  category: 单指标聚合
+  difficulty: easy
+  query: 单笔订单的最高金额是多少
+  gold_sql: SELECT MAX(f.order_amount) AS 最高金额 FROM fact_order f
+
+- id: A006
+  category: 单指标聚合
+  difficulty: easy
+  query: 单笔订单的最低金额是多少
+  gold_sql: SELECT MIN(f.order_amount) AS 最低金额 FROM fact_order f
+
+- id: A007
+  category: 单指标聚合
+  difficulty: easy
+  query: 单笔订单的最大购买数量
+  gold_sql: SELECT MAX(f.order_quantity) AS 最大数量 FROM fact_order f
+
+- id: A008
+  category: 单指标聚合
+  difficulty: medium
+  query: 总 GMV 是多少
+  gold_sql: SELECT SUM(f.order_amount) AS GMV FROM fact_order f
+
+- id: A009
+  category: 单指标聚合
+  difficulty: medium
+  query: 2025 年第一季度的平均客单价
+  gold_sql: SELECT AVG(f.order_amount) AS 客单价 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1'
+
+- id: A010
+  category: 单指标聚合
+  difficulty: medium
+  query: 整个季度卖出去了多少件商品
+  gold_sql: SELECT SUM(f.order_quantity) AS 总件数 FROM fact_order f
+
+- id: A011
+  category: 单指标聚合
+  difficulty: medium
+  query: 订单金额的总和
+  gold_sql: SELECT SUM(f.order_amount) AS 金额总和 FROM fact_order f
+
+- id: A012
+  category: 单指标聚合
+  difficulty: medium
+  query: 成交总额
+  gold_sql: SELECT SUM(f.order_amount) AS 成交总额 FROM fact_order f
+
+- id: A013
+  category: 单指标聚合
+  difficulty: easy
+  query: 有多少条订单记录
+  gold_sql: SELECT COUNT(f.order_id) AS 订单记录数 FROM fact_order f
+
+- id: A014
+  category: 单指标聚合
+  difficulty: medium
+  query: 平均每个订单购买几件商品
+  gold_sql: SELECT AVG(f.order_quantity) AS 平均件数 FROM fact_order f
+
+- id: A015
+  category: 单指标聚合
+  difficulty: medium
+  query: 所有商品的总销量
+  gold_sql: SELECT SUM(f.order_quantity) AS 总销量 FROM fact_order f
+
+- id: A016
+  category: 单指标聚合
+  difficulty: easy
+  query: 总订单金额
+  gold_sql: SELECT SUM(f.order_amount) AS 总订单金额 FROM fact_order f
+
+- id: A017
+  category: 单指标聚合
+  difficulty: medium
+  query: 客单价（每笔订单平均金额）
+  gold_sql: SELECT AVG(f.order_amount) AS 客单价 FROM fact_order f
+
+- id: A018
+  category: 单指标聚合
+  difficulty: medium
+  query: 2025 年第一季度的订单总额
+  gold_sql: SELECT SUM(f.order_amount) AS 订单总额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1'
+
+- id: A019
+  category: 单指标聚合
+  difficulty: medium
+  query: 平均每个订单的金额
+  gold_sql: SELECT AVG(f.order_amount) AS 平均金额 FROM fact_order f
+
+- id: A020
+  category: 单指标聚合
+  difficulty: medium
+  query: 累计成交金额
+  gold_sql: SELECT SUM(f.order_amount) AS 累计成交金额 FROM fact_order f
+
+- id: A021
+  category: 单指标聚合
+  difficulty: medium
+  query: 有多少个订单
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f
+
+- id: A022
+  category: 单指标聚合
+  difficulty: medium
+  query: 总购买数量
+  gold_sql: SELECT SUM(f.order_quantity) AS 总购买数量 FROM fact_order f
+
+- id: A023
+  category: 单指标聚合
+  difficulty: easy
+  query: 销售额总和
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额总和 FROM fact_order f
+
+- id: A024
+  category: 单指标聚合
+  difficulty: medium
+  query: 最高订单金额
+  gold_sql: SELECT MAX(f.order_amount) AS 最高订单金额 FROM fact_order f
+
+- id: A025
+  category: 单指标聚合
+  difficulty: medium
+  query: 最低订单金额
+  gold_sql: SELECT MIN(f.order_amount) AS 最低订单金额 FROM fact_order f
+
+- id: M001
+  category: 多指标计算
+  difficulty: medium
+  query: 按大区统计销售额和订单数
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 DESC
+
+- id: M002
+  category: 多指标计算
+  difficulty: medium
+  query: 按品类统计销售额和销量
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销售额 DESC
+
+- id: M003
+  category: 多指标计算
+  difficulty: hard
+  query: 每个品类的销售额占总销售额的比例
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) / (SELECT SUM(order_amount) FROM fact_order) AS 占比 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 占比 DESC
+
+- id: M004
+  category: 多指标计算
+  difficulty: medium
+  query: 各会员等级的销售额和订单数
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 销售额 DESC
+
+- id: M005
+  category: 多指标计算
+  difficulty: hard
+  query: 各大区的客单价
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) / COUNT(*) AS 客单价 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 客单价 DESC
+
+- id: M006
+  category: 多指标计算
+  difficulty: hard
+  query: 各品牌的平均订单金额和订单数
+  gold_sql: SELECT p.brand AS 品牌, AVG(f.order_amount) AS 平均订单金额, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 平均订单金额 DESC
+
+- id: M007
+  category: 多指标计算
+  difficulty: medium
+  query: 按性别统计销售额和销量
+  gold_sql: SELECT c.gender AS 性别, SUM(f.order_amount) AS 销售额, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.gender ORDER BY 销售额 DESC
+
+- id: M008
+  category: 多指标计算
+  difficulty: hard
+  query: 每个大区的销售额占全国销售额的比例
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) / (SELECT SUM(order_amount) FROM fact_order) AS 占比 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 占比 DESC
+
+- id: M009
+  category: 多指标计算
+  difficulty: medium
+  query: 按品类统计订单数和销量
+  gold_sql: SELECT p.category AS 品类, COUNT(*) AS 订单数, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 订单数 DESC
+
+- id: M010
+  category: 多指标计算
+  difficulty: hard
+  query: 每个客户的消费额和下单次数
+  gold_sql: SELECT c.customer_name AS 客户, SUM(f.order_amount) AS 消费额, COUNT(*) AS 下单次数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY 消费额 DESC
+
+- id: M011
+  category: 多指标计算
+  difficulty: medium
+  query: 各月份的销售额和订单数
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_amount) AS 销售额, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: M012
+  category: 多指标计算
+  difficulty: hard
+  query: 总销售额、总订单数和平均订单金额
+  gold_sql: SELECT SUM(f.order_amount) AS 总销售额, COUNT(*) AS 总订单数, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f
+
+- id: M013
+  category: 多指标计算
+  difficulty: hard
+  query: 各品类的平均客单价
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) / COUNT(*) AS 平均客单价 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 平均客单价 DESC
+
+- id: M014
+  category: 多指标计算
+  difficulty: medium
+  query: 各品牌的总销量和总销售额
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_quantity) AS 总销量, SUM(f.order_amount) AS 总销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 总销售额 DESC
+
+- id: M015
+  category: 多指标计算
+  difficulty: hard
+  query: 黄金会员的销售额占全体销售额的比例
+  gold_sql: SELECT (SELECT SUM(f.order_amount) FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '黄金') / (SELECT SUM(order_amount) FROM fact_order) AS 占比
+
+- id: M016
+  category: 多指标计算
+  difficulty: medium
+  query: 各大区的平均订单金额和订单数
+  gold_sql: SELECT r.region_name AS 大区, AVG(f.order_amount) AS 平均订单金额, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 平均订单金额 DESC
+
+- id: M017
+  category: 多指标计算
+  difficulty: hard
+  query: 男女客户的客单价对比
+  gold_sql: SELECT c.gender AS 性别, SUM(f.order_amount) / COUNT(*) AS 客单价 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.gender ORDER BY 客单价 DESC
+
+- id: M018
+  category: 多指标计算
+  difficulty: medium
+  query: 每个月卖出多少件商品，销售额多少
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_quantity) AS 销量, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: M019
+  category: 多指标计算
+  difficulty: hard
+  query: 销售额最高的品类的销售额是多少，占总销售额的百分比
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额, SUM(f.order_amount) / (SELECT SUM(order_amount) FROM fact_order) AS 占比 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销售额 DESC LIMIT 1
+
+- id: M020
+  category: 多指标计算
+  difficulty: medium
+  query: 各会员等级的总销售额和总订单数
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 总销售额, COUNT(*) AS 总订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 总销售额 DESC
+
+- id: M021
+  category: 多指标计算
+  difficulty: medium
+  query: 各大区的销量和订单数
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_quantity) AS 销量, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销量 DESC
+
+- id: M022
+  category: 多指标计算
+  difficulty: hard
+  query: 平均客单价最高的品类
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) / COUNT(*) AS 平均客单价 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 平均客单价 DESC LIMIT 1
+
+- id: M023
+  category: 多指标计算
+  difficulty: medium
+  query: 各品牌的订单数和平均订单金额
+  gold_sql: SELECT p.brand AS 品牌, COUNT(*) AS 订单数, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 订单数 DESC
+
+- id: M024
+  category: 多指标计算
+  difficulty: hard
+  query: 总销量、总销售额和客单价三个指标
+  gold_sql: SELECT SUM(f.order_quantity) AS 总销量, SUM(f.order_amount) AS 总销售额, SUM(f.order_amount) / COUNT(*) AS 客单价 FROM fact_order f
+
+- id: M025
+  category: 多指标计算
+  difficulty: medium
+  query: 各月份的销量和平均订单金额
+  gold_sql: SELECT d.month AS 月份, SUM(f.order_quantity) AS 销量, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month ORDER BY d.month
+
+- id: N001
+  category: 排序TOP N
+  difficulty: easy
+  query: 销售额最高的前 3 个大区
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 DESC LIMIT 3
+
+- id: N002
+  category: 排序TOP N
+  difficulty: easy
+  query: 销量最高的前 5 个商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销量 DESC LIMIT 5
+
+- id: N003
+  category: 排序TOP N
+  difficulty: medium
+  query: 订单数最多的前 3 个品类
+  gold_sql: SELECT p.category AS 品类, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 订单数 DESC LIMIT 3
+
+- id: N004
+  category: 排序TOP N
+  difficulty: medium
+  query: 消费最高的前 3 名客户
+  gold_sql: SELECT c.customer_name AS 客户, SUM(f.order_amount) AS 消费额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY 消费额 DESC LIMIT 3
+
+- id: N005
+  category: 排序TOP N
+  difficulty: easy
+  query: 销售额最低的 3 个大区
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 销售额 ASC LIMIT 3
+
+- id: N006
+  category: 排序TOP N
+  difficulty: medium
+  query: 平均订单金额最高的前 3 个品类
+  gold_sql: SELECT p.category AS 品类, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 平均订单金额 DESC LIMIT 3
+
+- id: N007
+  category: 排序TOP N
+  difficulty: easy
+  query: 销售额最高的前 10 个品牌
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 销售额 DESC LIMIT 10
+
+- id: N008
+  category: 排序TOP N
+  difficulty: medium
+  query: 订单数最多的省份是哪个
+  gold_sql: SELECT r.province AS 省份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.province ORDER BY 订单数 DESC LIMIT 1
+
+- id: N009
+  category: 排序TOP N
+  difficulty: medium
+  query: 销量排名前 8 的商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销量 DESC LIMIT 8
+
+- id: N010
+  category: 排序TOP N
+  difficulty: hard
+  query: 客单价最高的前 3 个大区
+  gold_sql: SELECT r.region_name AS 大区, SUM(f.order_amount) / COUNT(*) AS 客单价 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 客单价 DESC LIMIT 3
+
+- id: N011
+  category: 排序TOP N
+  difficulty: easy
+  query: 销售额最高的商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销售额 DESC LIMIT 1
+
+- id: N012
+  category: 排序TOP N
+  difficulty: medium
+  query: 下单次数最少的 3 个客户
+  gold_sql: SELECT c.customer_name AS 客户, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name ORDER BY 订单数 ASC LIMIT 3
+
+- id: N013
+  category: 排序TOP N
+  difficulty: medium
+  query: 销售额排名前 5 的品类
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 销售额 DESC LIMIT 5
+
+- id: N014
+  category: 排序TOP N
+  difficulty: medium
+  query: 销量最高的前 3 个品牌
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand ORDER BY 销量 DESC LIMIT 3
+
+- id: N015
+  category: 排序TOP N
+  difficulty: easy
+  query: 订单数最多的 3 个大区
+  gold_sql: SELECT r.region_name AS 大区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 订单数 DESC LIMIT 3
+
+- id: N016
+  category: 排序TOP N
+  difficulty: hard
+  query: 销售额第二高的商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销售额 DESC LIMIT 1 OFFSET 1
+
+- id: N017
+  category: 排序TOP N
+  difficulty: medium
+  query: 平均订单金额最低的品类
+  gold_sql: SELECT p.category AS 品类, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category ORDER BY 平均订单金额 ASC LIMIT 1
+
+- id: N018
+  category: 排序TOP N
+  difficulty: medium
+  query: 会员等级按销售额排名
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level ORDER BY 销售额 DESC
+
+- id: N019
+  category: 排序TOP N
+  difficulty: hard
+  query: 销量前三的商品及其销售额
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_quantity) AS 销量, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销量 DESC LIMIT 3
+
+- id: N020
+  category: 排序TOP N
+  difficulty: easy
+  query: 销售额最低的商品
+  gold_sql: SELECT p.product_name AS 商品, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.product_name ORDER BY 销售额 ASC LIMIT 1
+
+- id: F001
+  category: 过滤条件
+  difficulty: easy
+  query: 销售额大于 1000 的订单有多少
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f WHERE f.order_amount > 1000
+
+- id: F002
+  category: 过滤条件
+  difficulty: easy
+  query: 订单金额超过 5000 的订单
+  gold_sql: SELECT * FROM fact_order f WHERE f.order_amount > 5000
+
+- id: F003
+  category: 过滤条件
+  difficulty: medium
+  query: 购买数量大于等于 10 的订单
+  gold_sql: SELECT * FROM fact_order f WHERE f.order_quantity >= 10
+
+- id: F004
+  category: 过滤条件
+  difficulty: medium
+  query: 苹果品牌销售额超过 5000 的订单
+  gold_sql: SELECT f.order_id, f.order_amount FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '苹果' AND f.order_amount > 5000
+
+- id: F005
+  category: 过滤条件
+  difficulty: medium
+  query: 1 月份金额大于 5000 的订单
+  gold_sql: SELECT f.order_id, f.order_amount FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1 AND f.order_amount > 5000
+
+- id: F006
+  category: 过滤条件
+  difficulty: easy
+  query: 手机数码品类在 3 月份的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE p.category = '手机数码' AND d.month = 3
+
+- id: F007
+  category: 过滤条件
+  difficulty: medium
+  query: 华东地区手机数码品类的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id WHERE r.region_name = '华东' AND p.category = '手机数码'
+
+- id: F008
+  category: 过滤条件
+  difficulty: medium
+  query: 黄金会员在 1 月份的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id WHERE c.member_level = '黄金' AND d.month = 1
+
+- id: F009
+  category: 过滤条件
+  difficulty: hard
+  query: 2 月份男性客户的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id WHERE c.gender = '男' AND d.month = 2
+
+- id: F010
+  category: 过滤条件
+  difficulty: medium
+  query: 销量超过 10 件的订单有哪些
+  gold_sql: SELECT f.order_id, f.order_quantity FROM fact_order f WHERE f.order_quantity > 10
+
+- id: F011
+  category: 过滤条件
+  difficulty: medium
+  query: 华南地区订单金额超过 1000 的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华南' AND f.order_amount > 1000
+
+- id: F012
+  category: 过滤条件
+  difficulty: medium
+  query: 休闲零食品类的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '休闲零食'
+
+- id: F013
+  category: 过滤条件
+  difficulty: hard
+  query: 3 月份铂金会员在华东地区的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id WHERE c.member_level = '铂金' AND r.region_name = '华东' AND d.month = 3
+
+- id: F014
+  category: 过滤条件
+  difficulty: medium
+  query: 品牌为华为或苹果的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand IN ('华为', '苹果')
+
+- id: F015
+  category: 过滤条件
+  difficulty: medium
+  query: 金额在 100 到 1000 之间的订单数
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f WHERE f.order_amount BETWEEN 100 AND 1000
+
+- id: F016
+  category: 过滤条件
+  difficulty: medium
+  query: 商品名称包含"手机"的商品销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id WHERE p.product_name LIKE '%手机%'
+
+- id: F017
+  category: 过滤条件
+  difficulty: medium
+  query: 女性黄金会员的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.gender = '女' AND c.member_level = '黄金'
+
+- id: F018
+  category: 过滤条件
+  difficulty: hard
+  query: 2 月份休闲零食品类销量超过 20 的订单
+  gold_sql: SELECT f.order_id, f.order_quantity FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE p.category = '休闲零食' AND d.month = 2 AND f.order_quantity > 20
+
+- id: F019
+  category: 过滤条件
+  difficulty: medium
+  query: 销售额大于等于 9000 的订单
+  gold_sql: SELECT f.order_id, f.order_amount FROM fact_order f WHERE f.order_amount >= 9000
+
+- id: F020
+  category: 过滤条件
+  difficulty: medium
+  query: 华北地区家用电器品类的销售额
+  gold_sql: SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id WHERE r.region_name = '华北' AND p.category = '家用电器'
+
+- id: J001
+  category: 多表JOIN
+  difficulty: medium
+  query: 统计每个省份每个月的销售额
+  gold_sql: SELECT r.province AS 省份, d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY r.province, d.month ORDER BY r.province, d.month
+
+- id: J002
+  category: 多表JOIN
+  difficulty: hard
+  query: 统计每个品类在每个大区的销售额
+  gold_sql: SELECT p.category AS 品类, r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY p.category, r.region_name ORDER BY p.category, r.region_name
+
+- id: J003
+  category: 多表JOIN
+  difficulty: medium
+  query: 各会员等级在各月份的订单数
+  gold_sql: SELECT c.member_level AS 会员等级, d.month AS 月份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY c.member_level, d.month ORDER BY c.member_level, d.month
+
+- id: J004
+  category: 多表JOIN
+  difficulty: hard
+  query: 每个品牌在每个大区的销售额
+  gold_sql: SELECT p.brand AS 品牌, r.region_name AS 大区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY p.brand, r.region_name ORDER BY p.brand, r.region_name
+
+- id: J005
+  category: 多表JOIN
+  difficulty: medium
+  query: 各性别客户在各品类的销售额
+  gold_sql: SELECT c.gender AS 性别, p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY c.gender, p.category ORDER BY c.gender, p.category
+
+- id: J006
+  category: 多表JOIN
+  difficulty: hard
+  query: 2025 年 1 月各品类在各地区的销售额
+  gold_sql: SELECT p.category AS 品类, r.region_name AS 地区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1 GROUP BY p.category, r.region_name ORDER BY p.category, r.region_name
+
+- id: J007
+  category: 多表JOIN
+  difficulty: medium
+  query: 各品牌在各会员等级的销量
+  gold_sql: SELECT p.brand AS 品牌, c.member_level AS 会员等级, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY p.brand, c.member_level ORDER BY p.brand, c.member_level
+
+- id: J008
+  category: 多表JOIN
+  difficulty: hard
+  query: 各省份各品类产生的订单数
+  gold_sql: SELECT r.province AS 省份, p.category AS 品类, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY r.province, p.category ORDER BY r.province, p.category
+
+- id: J009
+  category: 多表JOIN
+  difficulty: medium
+  query: 各会员等级在各品类的销售额
+  gold_sql: SELECT c.member_level AS 会员等级, p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY c.member_level, p.category ORDER BY c.member_level, p.category
+
+- id: J010
+  category: 多表JOIN
+  difficulty: hard
+  query: 3 月份各大区各品类的销售额
+  gold_sql: SELECT r.region_name AS 大区, p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 3 GROUP BY r.region_name, p.category ORDER BY r.region_name, p.category
+
+- id: J011
+  category: 多表JOIN
+  difficulty: medium
+  query: 各性别客户在各地区的销售额
+  gold_sql: SELECT c.gender AS 性别, r.region_name AS 地区, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY c.gender, r.region_name ORDER BY c.gender, r.region_name
+
+- id: J012
+  category: 多表JOIN
+  difficulty: hard
+  query: 各品牌在各月份的销售额
+  gold_sql: SELECT p.brand AS 品牌, d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY p.brand, d.month ORDER BY p.brand, d.month
+
+- id: J013
+  category: 多表JOIN
+  difficulty: medium
+  query: 各会员等级在各地区的订单数
+  gold_sql: SELECT c.member_level AS 会员等级, r.region_name AS 地区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY c.member_level, r.region_name ORDER BY c.member_level, r.region_name
+
+- id: J014
+  category: 多表JOIN
+  difficulty: hard
+  query: 1 月份各品类各品牌的销售额
+  gold_sql: SELECT p.category AS 品类, p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.month = 1 GROUP BY p.category, p.brand ORDER BY p.category, p.brand
+
+- id: J015
+  category: 多表JOIN
+  difficulty: hard
+  query: 各客户在各月份的消费额
+  gold_sql: SELECT c.customer_name AS 客户, d.month AS 月份, SUM(f.order_amount) AS 消费额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY c.customer_name, d.month ORDER BY c.customer_name, d.month
+
+- id: H001
+  category: HAVING
+  difficulty: medium
+  query: 销售额超过 5000 的品类
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING SUM(f.order_amount) > 5000 ORDER BY 销售额 DESC
+
+- id: H002
+  category: HAVING
+  difficulty: medium
+  query: 订单数超过 20 的大区
+  gold_sql: SELECT r.region_name AS 大区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name HAVING COUNT(*) > 20 ORDER BY 订单数 DESC
+
+- id: H003
+  category: HAVING
+  difficulty: medium
+  query: 销量超过 30 的品牌
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand HAVING SUM(f.order_quantity) > 30 ORDER BY 销量 DESC
+
+- id: H004
+  category: HAVING
+  difficulty: medium
+  query: 消费额超过 5000 的客户
+  gold_sql: SELECT c.customer_name AS 客户, SUM(f.order_amount) AS 消费额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name HAVING SUM(f.order_amount) > 5000 ORDER BY 消费额 DESC
+
+- id: H005
+  category: HAVING
+  difficulty: medium
+  query: 平均订单金额超过 3000 的品类
+  gold_sql: SELECT p.category AS 品类, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING AVG(f.order_amount) > 3000 ORDER BY 平均订单金额 DESC
+
+- id: H006
+  category: HAVING
+  difficulty: hard
+  query: 下过 2 次以上订单的客户
+  gold_sql: SELECT c.customer_name AS 客户, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.customer_name HAVING COUNT(*) > 2 ORDER BY 订单数 DESC
+
+- id: H007
+  category: HAVING
+  difficulty: medium
+  query: 销售额超过 8000 的品牌
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand HAVING SUM(f.order_amount) > 8000 ORDER BY 销售额 DESC
+
+- id: H008
+  category: HAVING
+  difficulty: hard
+  query: 有 3 个以上订单的月份
+  gold_sql: SELECT d.month AS 月份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id GROUP BY d.month HAVING COUNT(*) > 3 ORDER BY d.month
+
+- id: H009
+  category: HAVING
+  difficulty: medium
+  query: 销量超过 20 的品类
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING SUM(f.order_quantity) > 20 ORDER BY 销量 DESC
+
+- id: H010
+  category: HAVING
+  difficulty: hard
+  query: 订单数在 10 到 30 之间的大区
+  gold_sql: SELECT r.region_name AS 大区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name HAVING COUNT(*) BETWEEN 10 AND 30 ORDER BY 订单数 DESC
+
+- id: H011
+  category: HAVING
+  difficulty: medium
+  query: 有至少一个订单金额超过 8000 的品类
+  gold_sql: SELECT p.category AS 品类, MAX(f.order_amount) AS 最高金额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING MAX(f.order_amount) > 8000 ORDER BY 最高金额 DESC
+
+- id: H012
+  category: HAVING
+  difficulty: medium
+  query: 会员等级中销售额超过 10000 的等级
+  gold_sql: SELECT c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY c.member_level HAVING SUM(f.order_amount) > 10000 ORDER BY 销售额 DESC
+
+- id: H013
+  category: HAVING
+  difficulty: hard
+  query: 客单价超过 2000 的品类
+  gold_sql: SELECT p.category AS 品类, SUM(f.order_amount) / COUNT(*) AS 客单价 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.category HAVING SUM(f.order_amount) / COUNT(*) > 2000 ORDER BY 客单价 DESC
+
+- id: H014
+  category: HAVING
+  difficulty: medium
+  query: 产生过 3 个及以上订单的省份
+  gold_sql: SELECT r.province AS 省份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.province HAVING COUNT(*) >= 3 ORDER BY 订单数 DESC
+
+- id: H015
+  category: HAVING
+  difficulty: medium
+  query: 总销量超过 50 的品牌
+  gold_sql: SELECT p.brand AS 品牌, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id GROUP BY p.brand HAVING SUM(f.order_quantity) > 50 ORDER BY 销量 DESC
+
+- id: X001
+  category: 交叉维度
+  difficulty: medium
+  query: 统计各地区各品类的销售额
+  gold_sql: SELECT r.region_name AS 地区, p.category AS 品类, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY r.region_name, p.category ORDER BY r.region_name, p.category
+
+- id: X002
+  category: 交叉维度
+  difficulty: medium
+  query: 统计各品类各月份的销售额
+  gold_sql: SELECT p.category AS 品类, d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY p.category, d.month ORDER BY p.category, d.month
+
+- id: X003
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各会员等级各品类的订单数
+  gold_sql: SELECT c.member_level AS 会员等级, p.category AS 品类, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY c.member_level, p.category ORDER BY c.member_level, p.category
+
+- id: X004
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各性别各品牌的销售额
+  gold_sql: SELECT c.gender AS 性别, p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY c.gender, p.brand ORDER BY c.gender, p.brand
+
+- id: X005
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各地区各月份的订单数
+  gold_sql: SELECT r.region_name AS 地区, d.month AS 月份, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY r.region_name, d.month ORDER BY r.region_name, d.month
+
+- id: X006
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各品类各会员等级的销售额
+  gold_sql: SELECT p.category AS 品类, c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY p.category, c.member_level ORDER BY p.category, c.member_level
+
+- id: X007
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各品牌各月份的销量
+  gold_sql: SELECT p.brand AS 品牌, d.month AS 月份, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY p.brand, d.month ORDER BY p.brand, d.month
+
+- id: X008
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各性别各月份的销售额
+  gold_sql: SELECT c.gender AS 性别, d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY c.gender, d.month ORDER BY c.gender, d.month
+
+- id: X009
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各地区各会员等级的销售额
+  gold_sql: SELECT r.region_name AS 地区, c.member_level AS 会员等级, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY r.region_name, c.member_level ORDER BY r.region_name, c.member_level
+
+- id: X010
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各品类各性别的订单数
+  gold_sql: SELECT p.category AS 品类, c.gender AS 性别, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_customer c ON f.customer_id = c.customer_id GROUP BY p.category, c.gender ORDER BY p.category, c.gender
+
+- id: X011
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各品牌各地区的销量
+  gold_sql: SELECT p.brand AS 品牌, r.region_name AS 地区, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY p.brand, r.region_name ORDER BY p.brand, r.region_name
+
+- id: X012
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各会员等级各月份的销售额
+  gold_sql: SELECT c.member_level AS 会员等级, d.month AS 月份, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY c.member_level, d.month ORDER BY c.member_level, d.month
+
+- id: X013
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各地区各品牌的销售额
+  gold_sql: SELECT r.region_name AS 地区, p.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id JOIN dim_product p ON f.product_id = p.product_id GROUP BY r.region_name, p.brand ORDER BY r.region_name, p.brand
+
+- id: X014
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各品类各月份的销量
+  gold_sql: SELECT p.category AS 品类, d.month AS 月份, SUM(f.order_quantity) AS 销量 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id GROUP BY p.category, d.month ORDER BY p.category, d.month
+
+- id: X015
+  category: 交叉维度
+  difficulty: hard
+  query: 统计各性别各地区的订单数
+  gold_sql: SELECT c.gender AS 性别, r.region_name AS 地区, COUNT(*) AS 订单数 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_region r ON f.region_id = r.region_id GROUP BY c.gender, r.region_name ORDER BY c.gender, r.region_name
+
+- id: E001
+  category: 边界
+  difficulty: medium
+  query: 有多少个不同的省份产生过订单
+  gold_sql: SELECT COUNT(DISTINCT r.province) AS 省份数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id
+
+- id: E002
+  category: 边界
+  difficulty: medium
+  query: 有多少种不同的品类
+  gold_sql: SELECT COUNT(DISTINCT p.category) AS 品类数 FROM dim_product p
+
+- id: E003
+  category: 边界
+  difficulty: medium
+  query: 有多少个不同的会员等级
+  gold_sql: SELECT COUNT(DISTINCT c.member_level) AS 会员等级数 FROM dim_customer c
+
+- id: E004
+  category: 边界
+  difficulty: medium
+  query: 商品表里一共有多少个商品
+  gold_sql: SELECT COUNT(*) AS 商品数 FROM dim_product p
+
+- id: E005
+  category: 边界
+  difficulty: medium
+  query: 客户表里一共有多少个客户
+  gold_sql: SELECT COUNT(*) AS 客户数 FROM dim_customer c
+
+- id: E006
+  category: 边界
+  difficulty: medium
+  query: 所有商品的品类有哪些（去重）
+  gold_sql: SELECT DISTINCT p.category AS 品类 FROM dim_product p
+
+- id: E007
+  category: 边界
+  difficulty: medium
+  query: 所有品牌有哪些（去重）
+  gold_sql: SELECT DISTINCT p.brand AS 品牌 FROM dim_product p
+
+- id: E008
+  category: 边界
+  difficulty: medium
+  query: 销售额最大的订单金额和最小的订单金额
+  gold_sql: SELECT MAX(f.order_amount) AS 最大金额, MIN(f.order_amount) AS 最小金额 FROM fact_order f
+
+- id: E009
+  category: 边界
+  difficulty: hard
+  query: 购买数量最多的订单是哪一笔
+  gold_sql: SELECT f.order_id, f.order_quantity FROM fact_order f ORDER BY f.order_quantity DESC LIMIT 1
+
+- id: E010
+  category: 边界
+  difficulty: hard
+  query: 金额最高的那笔订单是哪个客户下的
+  gold_sql: SELECT c.customer_name AS 客户, f.order_amount AS 金额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id ORDER BY f.order_amount DESC LIMIT 1
+
+- id: E011
+  category: 边界
+  difficulty: medium
+  query: 一共有多少种商品被卖过
+  gold_sql: SELECT COUNT(DISTINCT f.product_id) AS 商品种数 FROM fact_order f
+
+- id: E012
+  category: 边界
+  difficulty: hard
+  query: 既买过苹果又买过华为的客户有哪些
+  gold_sql: SELECT c.customer_name AS 客户 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_product p ON f.product_id = p.product_id WHERE p.brand = '苹果' AND c.customer_id IN (SELECT f2.customer_id FROM fact_order f2 JOIN dim_product p2 ON f2.product_id = p2.product_id WHERE p2.brand = '华为') GROUP BY c.customer_name
+
+- id: E013
+  category: 边界
+  difficulty: hard
+  query: 销售额高于平均订单金额的订单有多少
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f WHERE f.order_amount > (SELECT AVG(order_amount) FROM fact_order)
+
+- id: E014
+  category: 边界
+  difficulty: medium
+  query: 所有订单的金额四舍五入到百位后的总和
+  gold_sql: SELECT SUM(ROUND(f.order_amount, -2)) AS 金额总和 FROM fact_order f
+
+- id: E015
+  category: 边界
+  difficulty: medium
+  query: 统计有多少个订单的购买数量为 1
+  gold_sql: SELECT COUNT(*) AS 订单数 FROM fact_order f WHERE f.order_quantity = 1

@@ -57,6 +57,7 @@ flowchart LR
 | 向量检索 | Qdrant + TEI（BAAI/bge-large-zh-v1.5） |
 | 全文检索 | Elasticsearch 8 |
 | 数据存储 | MySQL 8（数仓 dw + 元数据 meta + 会话 chat_session/chat_message） |
+| 观测与评估 | Langfuse（可选：轨迹追踪 + 指标 / LLM-as-judge 评分） |
 | 前端 | React + Vite + TypeScript + Tailwind CSS |
 | 工程化 | uv、Docker Compose、OmegaConf、loguru、python-dotenv |
 
@@ -78,9 +79,14 @@ docker compose up -d   # MySQL8 / ES8+Kibana / Qdrant / TEI embedding
 ```bash
 # .env
 LLM_API_KEY=sk-xxxxxxxx          # SiliconFlow 等 OpenAI 兼容服务的 API Key
+
+# 可选：接入 Langfuse（轨迹追踪 + 评分），不配置则保持关闭
+LANGFUSE_PUBLIC_KEY=pk-lf-xxxx   # Langfuse 项目公钥
+LANGFUSE_SECRET_KEY=sk-lf-xxxx   # Langfuse 项目私钥
+# LANGFUSE_HOST=https://cloud.langfuse.com   # 自建时改为自己的地址
 ```
 
-`conf/app_config.yaml` 中可调整各服务地址、模型与索引名（LLM 的 api_key 已通过 `${oc.env:LLM_API_KEY}` 从环境变量读取）。
+`conf/app_config.yaml` 中可调整各服务地址、模型与索引名（LLM 的 api_key 已通过 `${oc.env:LLM_API_KEY}` 从环境变量读取）。Langfuse 默认关闭，开启需把 `langfuse.enabled` 设为 `true` 并配置上面的公钥/私钥。
 
 ### 3. 安装依赖并构建元数据知识库
 
