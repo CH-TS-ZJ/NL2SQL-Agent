@@ -173,6 +173,24 @@ def _build_report(records: list[dict]) -> str:
         for r in rs:
             out.append(_sample_block(r))
 
+    # LLM-as-judge 与 EA 一致性：仅在结果含 llm_judge（--judge 开启）时输出
+    judged = [r for r in records if r.get("llm_judge") is not None]
+    if judged:
+        avg_score = sum(r["llm_judge"] for r in judged) / len(judged)
+        judge_correct = sum(1 for r in judged if r.get("llm_judge_correct"))
+        agree = sum(
+            1 for r in judged if bool(r.get("llm_judge_correct")) == bool(r["ea"])
+        )
+        out.append("\n## 4. LLM-as-judge 与 EA 一致性\n")
+        out.append(_markdown_table(
+            ["指标", "值"],
+            [
+                ["judge 平均分", f"{avg_score:.3f}"],
+                ["judge 判对条数", f"{judge_correct}/{len(judged)} = {judge_correct / len(judged) * 100:.1f}%"],
+                ["judge 与 EA 一致率", f"{agree}/{len(judged)} = {agree / len(judged) * 100:.1f}%"],
+            ],
+        ))
+
     return "\n".join(out) + "\n"
 
 

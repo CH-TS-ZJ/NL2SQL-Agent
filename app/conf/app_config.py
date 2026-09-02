@@ -97,6 +97,16 @@ class AuthConfig:
 
 
 @dataclass
+class LangfuseConfig:
+    """Langfuse 观测与评估配置"""
+
+    enabled: bool = False
+    host: str = "https://cloud.langfuse.com"
+    public_key: str = ""
+    secret_key: str = ""
+
+
+@dataclass
 class AppConfig:
     """项目级总配置入口"""
 
@@ -108,6 +118,7 @@ class AppConfig:
     es: ESConfig
     llm: LLMConfig
     auth: AuthConfig
+    langfuse: LangfuseConfig
 
 
 # 从当前文件位置回到项目根目录，再定位到 conf/app_config.yaml

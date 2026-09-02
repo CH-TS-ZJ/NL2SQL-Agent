@@ -16,6 +16,7 @@ DWMySQLRepository.run 执行，走同一 DB、同一序列化路径，保证可�
     uv run python -m eval.run_eval                    # 全量（自动续跑）
     uv run python -m eval.run_eval --limit 20         # 抽样冒烟
     uv run python -m eval.run_eval --ids R001 R002    # 只跑指定 id
+    uv run python -m eval.run_eval --judge            # 追加 LLM-as-judge 语义评分
     uv run python -m eval.run_eval --fresh            # 从头重跑（清空旧结果）
 """
 
@@ -40,11 +41,13 @@ from app.clients.mysql_client_manager import (
     meta_mysql_client_manager,
 )
 from app.clients.qdrant_client_manager import qdrant_client_manager
+from app.core.langfuse import build_handler, flush, get_client
 from app.repositories.es.value_es_repository import ValueESRepository
 from app.repositories.mysql.dw.dw_mysql_repository import DWMySQLRepository
 from app.repositories.mysql.meta.meta_mysql_repository import MetaMySQLRepository
 from app.repositories.qdrant.column_qdrant_repository import ColumnQdrantRepository
 from app.repositories.qdrant.metric_qdrant_repository import MetricQdrantRepository
+from eval.llm_judge import judge_sql
 from eval.metrics import classify_outcome, execution_accuracy
 
 DATASET_PATH = Path(__file__).parent / "dataset.yaml"
@@ -80,6 +83,44 @@ def _is_transient_error(exc: str | None) -> bool:
     return any(h in low for h in _TRANSIENT_HINTS)
 
 
+def _langfuse_config(handler, item: dict) -> dict | None:
+    """Langfuse 启用时，为一次图执行组装 trace 元数据（名称=id、标签=类别/难度/id）"""
+    if handler is None:
+        return None
+    return {
+        "callbacks": [handler],
+        "metadata": {
+            "langfuse_trace_name": item["id"],
+            "langfuse_tags": [
+                item.get("category", ""),
+                item.get("difficulty", ""),
+                item["id"],
+            ],
+        },
+    }
+
+
+def _score_trace(client, trace_id: str, ea: bool, outcome: str, e2e_ms: float, judge: dict | None):
+    """把评测结果作为 score 写到对应 trace 上（EA / outcome / 延迟 / LLM-judge）"""
+    client.create_score(
+        trace_id=trace_id, name="execution_accuracy", value=1 if ea else 0, data_type="BOOLEAN"
+    )
+    client.create_score(
+        trace_id=trace_id, name="outcome", value=outcome, data_type="CATEGORICAL"
+    )
+    client.create_score(
+        trace_id=trace_id, name="latency_ms", value=e2e_ms, data_type="NUMERIC"
+    )
+    if judge is not None:
+        client.create_score(
+            trace_id=trace_id,
+            name="llm_judge",
+            value=judge["score"],
+            data_type="NUMERIC",
+            comment=judge["reason"],
+        )
+
+
 async def _validate_gold_sql(dw_repo: DWMySQLRepository, dataset: list[dict]) -> bool:
     """启动前全量校验 gold_sql，任一报错立即失败，保证 ground-truth 可信"""
     ok = True
@@ -92,18 +133,23 @@ async def _validate_gold_sql(dw_repo: DWMySQLRepository, dataset: list[dict]) ->
     return ok
 
 
-async def _run_graph(state: DataAgentState, context: DataAgentContext) -> tuple[dict, dict, str | None, str | None]:
-    """执行一次图，返回 (final_state, node_times, last_node, exception)"""
+async def _run_graph(
+    state: DataAgentState, context: DataAgentContext, item: dict
+) -> tuple[dict, dict, str | None, str | None, str | None]:
+    """执行一次图，返回 (final_state, node_times, last_node, exception, trace_id)"""
     final_state: dict = {}
     node_start: dict[str, float] = {}
     node_times: dict[str, float] = {}
     last_node: str | None = None
     exception: str | None = None
 
+    handler = build_handler()
+    config = _langfuse_config(handler, item)
+
     try:
         async with asyncio.timeout(PER_QUERY_TIMEOUT_S):
             async for chunk in graph.astream(
-                input=state, context=context, stream_mode=["custom", "values"]
+                input=state, context=context, stream_mode=["custom", "values"], config=config
             ):
                 mode, data = chunk
                 now = time.perf_counter()
@@ -124,7 +170,8 @@ async def _run_graph(state: DataAgentState, context: DataAgentContext) -> tuple[
     except Exception as e:
         exception = str(e)
 
-    return final_state, node_times, last_node, exception
+    trace_id = handler.last_trace_id if handler is not None else None
+    return final_state, node_times, last_node, exception, trace_id
 
 
 async def _run_one(
@@ -132,6 +179,7 @@ async def _run_one(
     context: DataAgentContext,
     dw_repo: DWMySQLRepository,
     max_attempts: int,
+    judge: bool,
 ) -> dict:
     """跑一条评测，返回一条 results 记录（含重试）"""
     state = DataAgentState(query=item["query"], original_query=item["query"], history=[])
@@ -151,19 +199,24 @@ async def _run_one(
             await asyncio.sleep(5 * (attempt + 1))
 
     t0 = time.perf_counter()
-    final_state, node_times, last_node, exception = await _run_graph(state, context)
+    final_state, node_times, last_node, exception, trace_id = await _run_graph(
+        state, context, item
+    )
 
     # 图执行若遇到瞬时连接错误，重试整条链路
     for attempt in range(1, max_attempts):
         if not _is_transient_error(exception):
             break
         await asyncio.sleep(5 * attempt)
-        final_state, node_times, last_node, exception = await _run_graph(state, context)
+        final_state, node_times, last_node, exception, trace_id = await _run_graph(
+            state, context, item
+        )
     t1 = time.perf_counter()
+    e2e_ms = round((t1 - t0) * 1000, 2)
 
     if gold_exception is not None:
         # 金标准 SQL 都执行不了，这条无法判定，标记为 graph_error 并附因
-        return {
+        record = {
             "id": item["id"],
             "category": item["category"],
             "difficulty": item["difficulty"],
@@ -173,7 +226,7 @@ async def _run_one(
             "retry_count": final_state.get("retry_count", 0),
             "fail_message": final_state.get("fail_message"),
             "error": final_state.get("error"),
-            "e2e_ms": round((t1 - t0) * 1000, 2),
+            "e2e_ms": e2e_ms,
             "node_times_ms": {k: round(v * 1000, 2) for k, v in node_times.items()},
             "exception": f"gold_sql 执行失败: {gold_exception}",
             "last_node": last_node,
@@ -181,7 +234,15 @@ async def _run_one(
             "gold_result": None,
             "ea": False,
             "outcome": "graph_error",
+            "trace_id": trace_id,
+            "llm_judge": None,
+            "llm_judge_correct": None,
+            "llm_judge_reason": None,
         }
+        client = get_client()
+        if client is not None and trace_id is not None:
+            _score_trace(client, trace_id, False, "graph_error", e2e_ms, None)
+        return record
 
     gen_result = final_state.get("result")
     ea = execution_accuracy(gen_result, gold_result)
@@ -194,7 +255,18 @@ async def _run_one(
         last_node=last_node,
     )
 
-    return {
+    # LLM-as-judge：可选，开启时对生成 SQL 做语义正确性评分
+    judge_result = None
+    if judge:
+        judge_result = await judge_sql(
+            query=item["query"],
+            gold_sql=item["gold_sql"],
+            gen_sql=final_state.get("sql"),
+            gold_result=gold_result,
+            gen_result=gen_result,
+        )
+
+    record = {
         "id": item["id"],
         "category": item["category"],
         "difficulty": item["difficulty"],
@@ -204,7 +276,7 @@ async def _run_one(
         "retry_count": final_state.get("retry_count", 0),
         "fail_message": final_state.get("fail_message"),
         "error": final_state.get("error"),
-        "e2e_ms": round((t1 - t0) * 1000, 2),
+        "e2e_ms": e2e_ms,
         "node_times_ms": {k: round(v * 1000, 2) for k, v in node_times.items()},
         "exception": exception,
         "last_node": last_node,
@@ -212,10 +284,20 @@ async def _run_one(
         "gold_result": gold_result,
         "ea": ea,
         "outcome": outcome,
+        "trace_id": trace_id,
+        "llm_judge": judge_result["score"] if judge_result else None,
+        "llm_judge_correct": judge_result["correct"] if judge_result else None,
+        "llm_judge_reason": judge_result["reason"] if judge_result else None,
     }
 
+    client = get_client()
+    if client is not None and trace_id is not None:
+        _score_trace(client, trace_id, ea, outcome, e2e_ms, judge_result)
 
-async def run(dataset: list[dict], out_path: Path, fresh: bool, max_attempts: int):
+    return record
+
+
+async def run(dataset: list[dict], out_path: Path, fresh: bool, max_attempts: int, judge: bool):
     # 断点续跑：加载已有结果，跳过已完成的 id
     done_ids: set[str] = set()
     if out_path.exists() and not fresh:
@@ -261,7 +343,7 @@ async def run(dataset: list[dict], out_path: Path, fresh: bool, max_attempts: in
             with out_path.open(mode, encoding="utf-8") as f:
                 for i, item in enumerate(todo, 1):
                     try:
-                        record = await _run_one(item, context, dw_repo, max_attempts)
+                        record = await _run_one(item, context, dw_repo, max_attempts, judge)
                     except Exception as e:
                         # 单条兜底：任何未预期异常都不应中断整轮
                         record = {
@@ -282,6 +364,10 @@ async def run(dataset: list[dict], out_path: Path, fresh: bool, max_attempts: in
                             "gold_result": None,
                             "ea": False,
                             "outcome": "graph_error",
+                            "trace_id": None,
+                            "llm_judge": None,
+                            "llm_judge_correct": None,
+                            "llm_judge_reason": None,
                         }
                     f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
                     f.flush()
@@ -301,6 +387,8 @@ async def run(dataset: list[dict], out_path: Path, fresh: bool, max_attempts: in
                 await closer()
             except Exception:
                 pass
+        # 把 Langfuse traces 与 scores 落盘（未启用时为 no-op）
+        flush()
 
 
 def main():
@@ -310,6 +398,11 @@ def main():
     parser.add_argument("--out", default=None, help="输出 JSONL 路径")
     parser.add_argument("--fresh", action="store_true", help="从头重跑（清空旧结果）")
     parser.add_argument("--max-attempts", type=int, default=3, help="单条最大尝试次数")
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="开启 LLM-as-judge 对生成 SQL 做语义正确性评分（额外调用 LLM，逐条更慢）",
+    )
     args = parser.parse_args()
 
     dataset = _filter_dataset(load_dataset(), args.ids, args.limit)
@@ -318,7 +411,7 @@ def main():
         sys.exit(1)
 
     out_path = Path(args.out) if args.out else DEFAULT_OUT
-    asyncio.run(run(dataset, out_path, args.fresh, args.max_attempts))
+    asyncio.run(run(dataset, out_path, args.fresh, args.max_attempts, args.judge))
 
 
 if __name__ == "__main__":

@@ -20,13 +20,16 @@ uv run python -m eval.run_eval --limit 20
 # 只跑指定 id
 uv run python -m eval.run_eval --ids R001 R002
 
+# 抽样冒烟 + 开启 LLM-as-judge（每条额外调用一次 LLM 做语义正确性评分）
+uv run python -m eval.run_eval --limit 20 --judge
+
 # 生成分析报告
 uv run python -m eval.analyze
 ```
 
 产物落在 `eval/results/`：
-- `results.jsonl`：每条一条记录（问句 / 金标准 SQL / 生成 SQL / 结果集 / 耗时 / 结果类别 / EA）
-- `report.md`：准确率 + 延迟分布 + 失败模式分析
+- `results.jsonl`：每条一条记录（问句 / 金标准 SQL / 生成 SQL / 结果集 / 耗时 / 结果类别 / EA，开启 Langfuse 或 `--judge` 后额外含 `trace_id` / `llm_judge` / `llm_judge_correct` / `llm_judge_reason`）
+- `report.md`：准确率 + 延迟分布 + 失败模式分析（含 LLM-judge 与 EA 一致性）
 
 ## 评测集说明（`dataset.yaml`）
 
@@ -44,3 +47,24 @@ uv run python -m eval.analyze
   - `validation_failed`：`fail_sql` 命中，EXPLAIN 校验自愈 3 次仍失败，未执行
   - `execution_error`：`run_sql` 抛异常（过 EXPLAIN 仍执行失败）
   - `graph_error`：图执行未正常结束
+
+## Langfuse 轨迹评估
+
+开启 Langfuse 后，每条评测会自动产生一条 trace（节点=span、LLM 调用=generation），并把评测结果作为 score 写到对应 trace 上，便于在 Langfuse UI 里按类别/难度聚合回看。
+
+**开启方式**：
+
+1. `.env` 配置 `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`（自建时另设 `LANGFUSE_HOST`）。
+2. `conf/app_config.yaml` 中 `langfuse.enabled: true`。
+3. 直接跑 `uv run python -m eval.run_eval`，trace 与 score 会随评测同步上报。
+
+**写入的 score**：
+
+| score 名 | 类型 | 含义 |
+|---|---|---|
+| `execution_accuracy` | BOOLEAN | 执行准确率（EA），1/0 |
+| `outcome` | CATEGORICAL | 失败模式分类（correct / wrong_result / ...） |
+| `latency_ms` | NUMERIC | 端到端耗时（毫秒） |
+| `llm_judge` | NUMERIC | LLM-as-judge 语义正确性评分 0~1（仅 `--judge` 开启时） |
+
+**LLM-as-judge（`--judge`）**：额外用大模型对「生成 SQL 是否语义等价于金标准」打分（`correct` + `score` 0~1 + `reason`），结果同时写入 `results.jsonl` 与 `llm_judge` score。judge 提示词见 `prompts/sql_judge.prompt`。开启后每条多一次 LLM 调用，全量 255 条会更慢。

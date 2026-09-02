@@ -47,3 +47,9 @@ auth:
   secret_key: ${oc.env:JWT_SECRET}
   algorithm: HS256
   expire_minutes: 10080
+
+langfuse:
+  enabled: true
+  host: ${oc.env:LANGFUSE_HOST,https://cloud.langfuse.com}
+  public_key: ${oc.env:LANGFUSE_PUBLIC_KEY,''}
+  secret_key: ${oc.env:LANGFUSE_SECRET_KEY,''}

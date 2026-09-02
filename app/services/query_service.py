@@ -17,6 +17,7 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from app.agent.context import DataAgentContext
 from app.agent.graph import graph
 from app.agent.state import ChatTurn, DataAgentState
+from app.core.langfuse import build_handler
 from app.repositories.es.value_es_repository import ValueESRepository
 from app.repositories.mysql.dw.dw_mysql_repository import DWMySQLRepository
 from app.repositories.mysql.meta.meta_mysql_repository import MetaMySQLRepository
@@ -109,12 +110,28 @@ class QueryService:
         # 首条 SSE 告诉前端当前会话编号，供前端同步到本地状态
         yield f"data: {json.dumps({'type': 'session', 'sessionId': session_id}, ensure_ascii=False)}\n\n"
 
+        # Langfuse 启用时把本次问数追踪为一条 trace，并打上会话/用户标签；禁用时 config 为 None
+        langfuse_config = None
+        handler = build_handler()
+        if handler is not None:
+            langfuse_config = {
+                "callbacks": [handler],
+                "metadata": {
+                    "langfuse_session_id": session_id,
+                    "langfuse_user_id": user_id,
+                    "langfuse_tags": ["query"],
+                },
+            }
+
         final_state: dict = {}
         try:
             # stream_mode 同时用 custom（进度消息）和 values（最终状态）
             # 多模式时 astream 逐项产出 (mode, data) 元组
             async for chunk in graph.astream(
-                input=state, context=context, stream_mode=["custom", "values"]
+                input=state,
+                context=context,
+                stream_mode=["custom", "values"],
+                config=langfuse_config,
             ):
                 mode, data = chunk
                 if mode == "custom":
